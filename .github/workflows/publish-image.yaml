@@ -1,0 +1,47 @@
+name: Publish Container Image
+
+on:
+  push:
+    branches:
+      - main
+    tags:
+      - "v*"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - name: Install ko
+        run: go install github.com/google/ko@v0.12.0
+
+      - name: Log in to GHCR
+        run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
+
+      - name: Compute image tags
+        id: meta
+        run: |
+          if [[ "${GITHUB_REF}" == refs/tags/* ]]; then
+            echo "tags=${GITHUB_REF_NAME}" >> "$GITHUB_OUTPUT"
+          else
+            echo "tags=sha-${GITHUB_SHA::7}" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Build and publish
+        env:
+          KO_DOCKER_REPO: ghcr.io/${{ github.repository }}
+        run: |
+          ko build -B --platform=linux/amd64,linux/arm64 --tags "${{ steps.meta.outputs.tags }}" ./
