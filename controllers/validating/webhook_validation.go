@@ -45,7 +45,7 @@ func (c *Controller) Reconcile(ctx context.Context, req reconcile.Request) (reco
 
 	var webhookServiceMap = make(map[*admissionv1.ServiceReference]struct{})
 
-	webhookObj := new(admissionv1.MutatingWebhookConfiguration)
+	webhookObj := new(admissionv1.ValidatingWebhookConfiguration)
 	if err := c.Client.Get(ctx, types.NamespacedName{Name: req.Name}, webhookObj); err != nil {
 		// webhook deleted, do nothing.
 		if apierrors.IsNotFound(err) {
